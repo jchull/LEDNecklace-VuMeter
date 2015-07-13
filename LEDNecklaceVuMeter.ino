@@ -13,6 +13,10 @@
 #define POT_CS 20
 #define POT_DATA 7
 
+#define P0_ADD 0x00
+#define P0_INC 0x04
+#define P0_DEC 0x08
+
 byte audioLevel = 1; // start off at one below max
 
 int spectrumValue[7]; // to hold a2d values
@@ -145,17 +149,22 @@ void readLevels() {
 void adjustAudioLevel(int change) {
   byte oldLevel = audioLevel;
   if (change > 0) {
-    if (audioLevel < MAX_VOLUME_REDUCTION)
-      audioLevel++;
+    if (audioLevel > 0){ 
+        audioLevel--;  
+        Serial.print("+" );
+    }
   } else if (change < 0) {
-    if (audioLevel > 0)
-      audioLevel--;
+    if (audioLevel < MAX_VOLUME_REDUCTION){
+         audioLevel++;
+         Serial.print("-" );
+    }
   }
-  Serial.print("Level: " );
-  Serial.println(audioLevel);
 
-  if(oldLevel != audioLevel)
-    spi_out(audioLevel);
+if(oldLevel != audioLevel){
+  spi_out(audioLevel);
+  Serial.println(audioLevel);
+}
+
 
 }
 
@@ -177,25 +186,10 @@ void checkAudioLevels() {
  // Serial.print(down_count);
  // Serial.println("");
   if( (up_count-down_count)>3 ){
-     adjustAudioLevel(-1);   
+     adjustAudioLevel(1);   
   }else if( (down_count-up_count)>3 ){
-    adjustAudioLevel(1);  
+    adjustAudioLevel(-1);  
   }
-}
-
-void spi_transfer(byte working) {
-
-  for (int i = 1; i <= 8; i++) { // setup a loop of 8 iterations, one for each bit
-    
-    shiftOut(POT_DATA, POT_SCK, MSBFIRST, working);
-   /* digitalWrite (POT_SCK, HIGH); // set clock high, the pot IC will read the bit into its register
-
-    working = working << 1;
-
-    digitalWrite(POT_SCK, LOW); // set clock low, the pot IC will stop reading and prepare for the next iteration (next significant bit
-*/
-  }
-
 }
 
 
@@ -203,9 +197,9 @@ void spi_out( byte data_byte) { // SPI tranfer out function begins here
 
   digitalWrite (POT_CS, LOW); // set slave select low for a certain chip, defined in the argument in the main loop. selects the chip
   delayMicroseconds(1);
-  spi_transfer(B00010001); // transfer the work byte, which is equal to the cmd_byte, out using spi
 
-  spi_transfer(data_byte); // transfer the work byte, which is equal to the data for the pot
+  shiftOut(POT_DATA, POT_SCK, MSBFIRST, P0_ADD);    // transfer the wiper address byte
+  shiftOut(POT_DATA, POT_SCK, MSBFIRST, data_byte); // transfer the work byte
 
   digitalWrite(POT_CS, HIGH); // set slave select high for a certain chip, defined in the argument in the main loop. deselcts the chip
 
