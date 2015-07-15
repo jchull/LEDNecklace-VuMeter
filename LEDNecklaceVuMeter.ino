@@ -30,7 +30,7 @@ int quietCounter = 0;
 
 #define INPUT_FLOOR 80
 
-#define MAX_VOLUME_REDUCTION 127
+#define MAX_VOLUME_REDUCTION 128
 
 
 // Params for width and height
@@ -87,18 +87,15 @@ void setup()
   FastLED.addLeds<CHIPSET, LED_PIN, CLOCK_PIN, BGR>(leds, NUM_LEDS).setCorrection(0xFFFFFF);
   FastLED.setBrightness(255 / brightnessFactor); //0-255
 
-  pinMode(POT_CS, OUTPUT);
-  pinMode(POT_SCK, OUTPUT);
-  pinMode(POT_DATA, OUTPUT);
-  digitalWrite(POT_CS, HIGH);//hold high when not writing
-  adjustAudioLevel(0);
+  
 }
 
 void loop()
 {
-  Serial.begin(9600);
+//  Serial.begin(9600);
   readLevels();
   updateMatrix();
+ 
   rollingWheelIndex ++;
   if (rollingWheelIndex > 254)
     rollingWheelIndex = 0;
@@ -122,7 +119,6 @@ void updateMatrix() {
   FastLED.show();
   FastLED.delay(25);
 
-  checkAudioLevels();
 
 }
 
@@ -137,73 +133,20 @@ void readLevels() {
     delayMicroseconds(36); // 36us required to allow the output to settle
     spectrumValue[i] = analogRead(EQ_READ);
     spectrumValue[6] = spectrumValue[6]*3;
-    Serial.print(spectrumValue[i]);
-    Serial.print("\t");
+//    Serial.print(spectrumValue[i]);
+//    Serial.print("\t");
     digitalWrite(EQ_STROBE, HIGH);
     delayMicroseconds(18);
   }
-  Serial.println("");
-}
-
-// -1 to reduce level, +1 to increase level, 0 sets to max volume
-void adjustAudioLevel(int change) {
-  byte oldLevel = audioLevel;
-  if (change > 0) {
-    if (audioLevel > 0){ 
-        audioLevel--;  
-        Serial.print("+" );
-    }
-  } else if (change < 0) {
-    if (audioLevel < MAX_VOLUME_REDUCTION){
-         audioLevel++;
-         Serial.print("-" );
-    }
-  }
-
-if(oldLevel != audioLevel){
-  spi_out(audioLevel);
-  Serial.println(audioLevel);
+//  Serial.println("");
 }
 
 
-}
-
-void checkAudioLevels() {
-  // if the max for 3 channels is 1022, turn down if it's less than 500, turn it up
-  byte up_count = 0;
-  byte down_count = 0;
-  for (int i = 0; i < 7; i++) {
-    //Serial.print(maxValue[i]);
-    //Serial.print("\t");
-    if(spectrumValue[i]>1022)
-      down_count++;   
-    else if(spectrumValue[i]<200)
-     up_count++; 
-  }
-  //Serial.print("\t");
- // Serial.print(up_count);
- // Serial.print("/");
- // Serial.print(down_count);
- // Serial.println("");
-  if( (up_count-down_count)>3 ){
-     adjustAudioLevel(1);   
-  }else if( (down_count-up_count)>3 ){
-    adjustAudioLevel(-1);  
-  }
-}
 
 
-void spi_out( byte data_byte) { // SPI tranfer out function begins here
 
-  digitalWrite (POT_CS, LOW); // set slave select low for a certain chip, defined in the argument in the main loop. selects the chip
-  delayMicroseconds(1);
 
-  shiftOut(POT_DATA, POT_SCK, MSBFIRST, P0_ADD);    // transfer the wiper address byte
-  shiftOut(POT_DATA, POT_SCK, MSBFIRST, data_byte); // transfer the work byte
 
-  digitalWrite(POT_CS, HIGH); // set slave select high for a certain chip, defined in the argument in the main loop. deselcts the chip
-
-}
 
 
 
